@@ -14,7 +14,7 @@
 		<vaadin.plugin.version>7.7.28</vaadin.plugin.version>
 	</properties>
 	<artifactId>ipspine-prototype-portlet</artifactId>
-	<version>0.1.0-SNAPSHOT</version>
+	<version>0.9.0-SNAPSHOT</version>
 	<name>iPSpine Prototype Portlet</name>
 	<url>http://github.com/qbicsoftware/ipspine-prototype-portlet</url>
 	<description>Omics Platform prototype portlet for iPSpine</description>
@@ -90,6 +90,11 @@
 			<groupId>life.qbic</groupId>
 			<artifactId>openbis-client-lib</artifactId>
 			<version>1.6.0-SNAPSHOT</version>
+		</dependency>
+		<dependency>
+			<groupId>life.qbic</groupId>
+			<artifactId>openbis-common</artifactId>
+			<version>18.06.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.logging.log4j</groupId>

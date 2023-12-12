@@ -1,5 +1,8 @@
 package life.qbic.ipspine.registration;
 
+import ch.ethz.sis.openbis.generic.asapi.v3.dto.project.Project;
+import ch.ethz.sis.openbis.generic.asapi.v3.dto.vocabulary.create.VocabularyTermCreation;
+import ch.ethz.sis.openbis.generic.asapi.v3.dto.vocabulary.id.VocabularyPermId;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -58,7 +61,6 @@ import life.qbic.xml.study.Qexperiment;
  * 
  */
 public class OpenbisV3CreationController implements IOpenbisCreationController {
-  final int RETRY_UNTIL_SECONDS_PASSED = 5;
   final int SPLIT_AT_ENTITY_SIZE = 300;
   private IOpenBisClient openbis;
   private OpenbisV3APIWrapper api;
@@ -172,7 +174,7 @@ public class OpenbisV3CreationController implements IOpenbisCreationController {
         expCreations.add(exp);
       }
     }
-    if (expCreations.size() > 0) {
+    if (!expCreations.isEmpty()) {
       logger.info("Sending " + expCreations.size() + " new experiments to the V3 API.");
       IOperation operation = new CreateExperimentsOperation(expCreations);
       return api.handleOperations(operation);
@@ -223,10 +225,10 @@ public class OpenbisV3CreationController implements IOpenbisCreationController {
 
   private List<List<ISampleBean>> splitSamplesIntoBatches(List<ISampleBean> samples,
       int targetSize) {
-    List<List<ISampleBean>> res = new ArrayList<List<ISampleBean>>();
+    List<List<ISampleBean>> res = new ArrayList<>();
     int size = samples.size();
     if (size < targetSize)
-      return new ArrayList<List<ISampleBean>>(Arrays.asList(samples));
+      return new ArrayList<>(Arrays.asList(samples));
     for (int i = 0; i < size / targetSize; i++) {
       int from = i * targetSize;
       int to = (i + 1) * targetSize;
@@ -309,15 +311,15 @@ public class OpenbisV3CreationController implements IOpenbisCreationController {
   }
 
   /**
-   * this is the one normally called!
-   * 
+   *
    * @param tsvSampleHierarchy
    * @param description
-   * @param secondaryName
+   * @param informativeExperiments
    * @param bar
    * @param info
    * @param ready
-   * @param user
+   * @param entitiesToUpdate
+   * @param isPilot
    */
   @Override
   public void registerProjectWithExperimentsAndSamplesBatchWise(
@@ -503,6 +505,20 @@ public class OpenbisV3CreationController implements IOpenbisCreationController {
     return res;
   }
 
+  public void deleteProject1(String projectCode, String reason) {
+    Project project = api.getProject(projectCode).getObjects().get(0);
+    api.deleteOpenbisProject(project, reason);
+  }
+
+  public void deleteProject2(String projectCode, String reason) {
+    Project project = api.getProject(projectCode).getObjects().get(0);
+    api.deleteOpenbisProject2(project, reason);
+  }
+
+  public void trashDatasets(List<String> permIds, String reason) {
+    api.trashDatasets(permIds, reason);
+  }
+
   public void updateDatasets(List<String> ids, Map<String, Map<String, Object>> idsToProps,
       Map<String, SampleIdentifier> idsToSampleIDs) {
     List<DataSetUpdate> updates = new ArrayList<>();
@@ -617,6 +633,9 @@ public class OpenbisV3CreationController implements IOpenbisCreationController {
           props.put("Q_SECONDARY_NAME", sample.getSecondaryName());
         }
         for (String key : sample.getMetadata().keySet()) {
+          if(key==null) {
+            return false;
+          }
           props.put(key, sample.getMetadata().get(key).toString());
         }
         sampleCreation.setProperties(props);

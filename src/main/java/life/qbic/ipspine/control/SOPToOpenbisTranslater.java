@@ -12,8 +12,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.*;
-import java.net.URISyntaxException;
-import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
@@ -44,7 +42,7 @@ public class SOPToOpenbisTranslater {
     return collect;
   }
 
-  private JSONSOP parseJSON(File file) throws FileNotFoundException {
+  public JSONSOP parseJSON(File file) throws FileNotFoundException {
 
     LinkedHashMap<BasicSampleDTO, List<BasicSampleDTO>> samplesToSources = new LinkedHashMap<>();
     InputStream targetStream = new FileInputStream(file);
@@ -77,7 +75,6 @@ public class SOPToOpenbisTranslater {
         measuredEntities.addAll(sample.getValidEntityTypeNames());
       }
     }
-    System.out.println(measuredEntities);
     Collections.reverse(availableEntities); // sources first, cells last etc.
     return new JSONSOP(name, description, measuredEntities, samplesToSources, availableEntities);
   }
@@ -111,15 +108,36 @@ public class SOPToOpenbisTranslater {
     return source;
   }
 
-  private boolean isParentSample(BasicSampleDTO sample, Map<BasicSampleDTO, List<BasicSampleDTO>> sampleMap) {
-    Set<BasicSampleDTO> res = sampleMap.values().stream().flatMap(List::stream).collect(Collectors.toSet());
-    return res.contains(sample);
+  private boolean isParentOfSelectionHelper(BasicSampleDTO parentToFind, BasicSampleDTO currentSample, Map<BasicSampleDTO, List<BasicSampleDTO>> sampleMap) {
+    if(parentToFind.equals(currentSample)) {
+      return true;
+    }
+    boolean res = false;
+    for(BasicSampleDTO parent : sampleMap.get(currentSample)) {
+      res |= isParentOfSelectionHelper(parentToFind, parent, sampleMap);
+    }
+    return res;
+  }
+
+  private boolean isParentOfSelection(BasicSampleDTO sample, String selectedMeasuredType, Map<BasicSampleDTO, List<BasicSampleDTO>> sampleMap) {
+    BasicSampleDTO measured = null;
+    for(BasicSampleDTO key : sampleMap.keySet()) {
+      if(key.getValidEntityTypeNames().contains(selectedMeasuredType)) {
+        measured = key;
+        break;
+      }
+    }
+    boolean res = isParentOfSelectionHelper(sample, measured, sampleMap);
+    System.err.println("is "+sample+" parent of "+measured+"?");
+    System.err.println(res);
+    return res;
   }
 
   public PreparationExperimentStructure getDesignForSOP(JSONSOP sop, List<Map<String, Object>> sampleInfos) {
     String sopName = sop.getName();
 
     Map<String, TSVSampleBean> knownDonors = new HashMap<>();
+    Map<String, TSVSampleBean> knownSamples = new HashMap<>();
     Map<String, Object> designProps = new HashMap<>();
     Map<String, Object> extractProps = new HashMap<>();
     // SOP name is always set to the lowest level of sample preparation in order to be able to fetch
@@ -132,68 +150,85 @@ public class SOPToOpenbisTranslater {
     int uniqueSampleCode = 0;
 
     for (Map<String,Object> sampleInfo : sampleInfos) {
+      log.error("handling: "+sampleInfo);
       String name = (String) sampleInfo.get("name");
       String donor = (String) sampleInfo.get("donor");
       Set<String> selectedEntityTypes = (Set<String>) sampleInfo.get("selected_entity_types");
       String description = (String) sampleInfo.get("description");
       String selectedMeasuredType = (String) sampleInfo.get("selected_measured_type");
+      Object medium = sampleInfo.get("medium");
+      Object timepoint = sampleInfo.get("timepoint");
+      Object treatment = sampleInfo.get("treatment");
 
       LinkedHashMap<BasicSampleDTO, List<BasicSampleDTO>> sampleDTOMap = sop.getSamplesToSources();
 
       Map<BasicSampleDTO, TSVSampleBean> dtoToSampleMap = new HashMap<>();
       for (BasicSampleDTO s : sampleDTOMap.keySet()) {
-        uniqueSampleCode++;
-        SampleType type = s.getSampleType();
-        String entityName = s.getFirstEntityTypeName();
-        Set<String> possibleEntities = s.getValidEntityNames(selectedEntityTypes);
-        //TODO stricter?
-        if(possibleEntities.size() > 0) {
-          entityName = possibleEntities.iterator().next();
-        }
-        switch (type) {
-          case Q_BIOLOGICAL_ENTITY:
-            if(knownDonors.containsKey(donor)) {
-              dtoToSampleMap.put(s, knownDonors.get(donor));
-            } else {
-              TSVSampleBean donorSample =
-                  createEntity(uniqueSampleCode, entityName, donor,
-                      "Donor / sample source for " + name);
-              speciesSamples.add(donorSample);
-              dtoToSampleMap.put(s, donorSample);
-              knownDonors.put(donor, donorSample);
-            }
-            break;
-          case Q_BIOLOGICAL_SAMPLE:
-            if(s.isMeasured() && !(entityName.equals(selectedMeasuredType)) && !isParentSample(s, sampleDTOMap)) {
-              System.out.println(entityName+" vs. "+selectedMeasuredType);
-              System.out.println("skipping: "+name+" - "+description);
-              System.out.println(s);
+        if(isParentOfSelection(s, selectedMeasuredType, sampleDTOMap)) {
+          uniqueSampleCode++;
+          SampleType type = s.getSampleType();
+          String entityName = s.getFirstEntityTypeName();
+          Set<String> possibleEntities = s.getValidEntityNames(selectedEntityTypes);
+          //it is expected selectable options cannot overlap with non-selectable ones
+          if (possibleEntities.size() > 0) {
+            entityName = possibleEntities.iterator().next();
+          }
+          switch (type) {
+            case Q_BIOLOGICAL_ENTITY:
+              String uniqueDonorName = donor + entityName;
+              if (knownDonors.containsKey(uniqueDonorName)) {
+                dtoToSampleMap.put(s, knownDonors.get(uniqueDonorName));
+              } else {
+                TSVSampleBean donorSample =
+                    createEntity(uniqueSampleCode, entityName, donor,
+                        "Donor / sample source for " + name);
+                speciesSamples.add(donorSample);
+                dtoToSampleMap.put(s, donorSample);
+                knownDonors.put(uniqueDonorName, donorSample);
+              }
               break;
-            }
-            TSVSampleBean tissue = createSample(uniqueSampleCode, entityName, name, description);
-            extractSamples.add(tissue);
-            dtoToSampleMap.put(s, tissue);
-
-            break;
-          default:
-            log.error("Sample type " + type + " not handled.");
+            case Q_BIOLOGICAL_SAMPLE:
+              String uniqueSampleName = name+donor+entityName;
+              if (knownSamples.containsKey(uniqueSampleName)) {
+                System.err.println("name "+uniqueSampleName+" is known");
+                dtoToSampleMap.put(s, knownSamples.get(uniqueSampleName));
+              } else {
+                TSVSampleBean tissue = createSample(uniqueSampleCode, entityName, name,
+                    description);
+                if (medium != null) {
+                  tissue.addProperty("medium", medium);
+                }
+                if (timepoint != null) {
+                  tissue.addProperty("timepoint", timepoint);
+                }
+                if (treatment != null) {
+                  tissue.addProperty("treatment", treatment);
+                }
+                extractSamples.add(tissue);
+                dtoToSampleMap.put(s, tissue);
+                knownSamples.put(uniqueSampleName, tissue);
+              }
+              break;
+            default:
+              log.error("Sample type " + type + " not handled.");
+          }
         }
       }
       for (BasicSampleDTO s : sampleDTOMap.keySet()) {
         List<BasicSampleDTO> parents = sampleDTOMap.get(s);
         for(BasicSampleDTO p : parents) {
           if(!dtoToSampleMap.containsKey(p)) {
-            System.out.println("no parent");
-            System.out.println(p);
+            log.error("no parent");
+            log.error(p);
           }
-          if(!dtoToSampleMap.containsKey(s)) {
-            System.out.println("no sample");
-            System.out.println(s);
+          if(dtoToSampleMap.containsKey(s)) {
+            dtoToSampleMap.get(s).addParent(dtoToSampleMap.get(p));
           }
-          dtoToSampleMap.get(s).addParent(dtoToSampleMap.get(p));
         }
       }
     }
+    log.error(speciesSamples);
+    log.error(extractSamples);
     OpenbisExperiment design = new OpenbisExperiment("preliminary name 1",
         ExperimentType.Q_EXPERIMENTAL_DESIGN, designProps);
     OpenbisExperiment extraction = new OpenbisExperiment("preliminary name 2",

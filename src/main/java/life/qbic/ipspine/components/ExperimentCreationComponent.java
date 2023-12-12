@@ -17,8 +17,8 @@ import com.vaadin.ui.Table;
 import com.vaadin.ui.TextField;
 import com.vaadin.ui.VerticalLayout;
 import life.qbic.datamodel.samples.SampleType;
+import life.qbic.ipspine.control.Result;
 import life.qbic.ipspine.model.JSONSOP;
-import life.qbic.ipspine.model.SOP;
 import life.qbic.portal.Styles;
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -28,18 +28,23 @@ public class ExperimentCreationComponent extends VerticalLayout {
   private final String SAMPLE_NAME_TITLE = "Sample Name";
   private final String SAMPLE_DESCRIPTION_TITLE = "Description";
   private final String SAMPLE_TYPE_NAME = "Sample Type";
-  private ComboBox sampleSOPs;
-  private Label sopDescription;
+  private final String DESIGN_FACTOR1_TITLE = "Medium";
+  private final String DESIGN_FACTOR2_TITLE = "Treatment";
+
+  private final String DESIGN_FACTOR3_TITLE = "Timepoint";
+  private final ComboBox sampleSOPs;
+  private final Label sopDescription;
   private TextField experimentDescription;
-  private VerticalLayout sopOptions;
-  private Table samples;
-  private List<SOP> sops;
+  private TextField publicationReference;
+
+  private TextField dataProvider;
+  private final VerticalLayout sopOptions;
+  private final Table samples;
   private List<JSONSOP> JSONSops;
-  private Button addSampleRow;
-  private Button removeSampleRow;
-  private Button registerSamples;
-  private HorizontalLayout buttons;
-  private List<Object> tableItems;
+  private final Button addSampleRow;
+  private final Button registerSamples;
+  private final HorizontalLayout buttons;
+  private final List<Object> tableItems;
 
   public ExperimentCreationComponent() {
     setSpacing(true);
@@ -48,7 +53,7 @@ public class ExperimentCreationComponent extends VerticalLayout {
     tableItems = new ArrayList<>();
 
     sampleSOPs = new ComboBox("Sample Preparation (SOPs)");
-    sampleSOPs.setWidth("400");
+    sampleSOPs.setWidth("550");
     addComponent(sampleSOPs);
     sopDescription = new Label();
     addComponent(sopDescription);
@@ -62,7 +67,7 @@ public class ExperimentCreationComponent extends VerticalLayout {
     addSampleRow = new Button();
     addSampleRow.setIcon(FontAwesome.PLUS_CIRCLE);
 
-    removeSampleRow = new Button();
+    Button removeSampleRow = new Button();
     removeSampleRow.setIcon(FontAwesome.MINUS_CIRCLE);
 
     removeSampleRow.addClickListener(new Button.ClickListener() {
@@ -79,12 +84,23 @@ public class ExperimentCreationComponent extends VerticalLayout {
     buttons.addComponent(registerSamples);
 
     samples = new Table("New Samples");
+    samples.setWidth("1000");
 
     samples.setStyleName(Styles.tableTheme);
     samples.addContainerProperty(DONOR_NAME_TITLE, TextField.class, null);
     samples.addContainerProperty(SAMPLE_NAME_TITLE, TextField.class, null);
     samples.addContainerProperty(SAMPLE_DESCRIPTION_TITLE, TextField.class, null);
     samples.addContainerProperty(SAMPLE_TYPE_NAME, ComboBox.class, null);
+    samples.addContainerProperty(DESIGN_FACTOR1_TITLE, TextField.class, null);
+    samples.addContainerProperty(DESIGN_FACTOR2_TITLE, TextField.class, null);
+    samples.addContainerProperty(DESIGN_FACTOR3_TITLE, TextField.class, null);
+
+    samples.setColumnWidth(DONOR_NAME_TITLE, 100);
+    samples.setColumnWidth(SAMPLE_NAME_TITLE, 110);
+    samples.setColumnWidth(SAMPLE_DESCRIPTION_TITLE, 150);
+    samples.setColumnWidth(DESIGN_FACTOR1_TITLE, 100);
+    samples.setColumnWidth(DESIGN_FACTOR2_TITLE, 110);
+    samples.setColumnWidth(DESIGN_FACTOR3_TITLE, 110);
 
     addComponent(samples);
     addComponent(buttons);
@@ -105,7 +121,8 @@ public class ExperimentCreationComponent extends VerticalLayout {
         if (selected != null) {
           JSONSOP sop = getJSONSOP();
           sopDescription.setValue(sop.getDescription());
-          listSOPOptions(sop.getAvailableEntities());
+
+          listSOPOptions(sop.getEntitiesNotMeasured());
 
           Set<String> measuredTypes = sop.getMeasuredEntities();
 
@@ -113,9 +130,17 @@ public class ExperimentCreationComponent extends VerticalLayout {
 
           experimentDescription = new TextField("Additional Description");
           experimentDescription.setWidth("400");
-
           sopOptions.addComponent(experimentDescription);
-          if (samples.size() < 1) {
+
+          publicationReference = new TextField("Reference to Publication");
+          publicationReference.setWidth("400");
+          sopOptions.addComponent(publicationReference);
+
+          dataProvider = new TextField("Name of Data Provider");
+          dataProvider.setWidth("400");
+          sopOptions.addComponent(dataProvider);
+
+          if (samples.isEmpty()) {
             addSampleRow(measuredTypes);
           }
         }
@@ -123,11 +148,10 @@ public class ExperimentCreationComponent extends VerticalLayout {
       }
 
       private void initAddRowListener(Set<String> measuredTypes) {
-        for (Object listener : addSampleRow.getListeners(ClickListener.class)) {
+        for (Object listener : addSampleRow.getListeners(ClickEvent.class)) {
           addSampleRow.removeClickListener((ClickListener) listener);
         }
         addSampleRow.addClickListener(new Button.ClickListener() {
-
           @Override
           public void buttonClick(ClickEvent event) {
             addSampleRow(measuredTypes);
@@ -147,6 +171,9 @@ public class ExperimentCreationComponent extends VerticalLayout {
       if(values.size() == 1) {
         optionBox.setValue(values.iterator().next());
         optionBox.setEnabled(false);
+      } else {
+        optionBox.setRequired(true);
+        optionBox.setValidationVisible(true);
       }
       sopOptions.addComponent(optionBox);
     }
@@ -158,10 +185,27 @@ public class ExperimentCreationComponent extends VerticalLayout {
       Component c = sopOptions.getComponent(i);
       if (c instanceof ComboBox) {
         ComboBox box = (ComboBox) c;
-        res.add(box.getValue().toString());
+        Object val = box.getValue();
+        if(val==null) {
+          res.add("");
+        } else {
+          res.add(val.toString());
+        }
       }
     }
     return res;
+  }
+
+  private TextField newTextFieldUnsized(boolean required) {
+    TextField res = new TextField();
+    res.setRequired(required);
+    res.setValidationVisible(required);
+    res.setSizeFull();
+    return res;
+  }
+
+  private TextField newTextFieldUnsized() {
+    return newTextFieldUnsized(false);
   }
 
   protected void addSampleRow(Set<String> measuredTypes) {
@@ -169,19 +213,26 @@ public class ExperimentCreationComponent extends VerticalLayout {
     tableItems.add(last);
 
     Item row = samples.getItem(last);
-    row.getItemProperty(DONOR_NAME_TITLE).setValue(new TextField());
-    row.getItemProperty(SAMPLE_NAME_TITLE).setValue(new TextField());
-    row.getItemProperty(SAMPLE_DESCRIPTION_TITLE).setValue(new TextField());
+    row.getItemProperty(DONOR_NAME_TITLE).setValue(newTextFieldUnsized(true));
+    row.getItemProperty(SAMPLE_NAME_TITLE).setValue(newTextFieldUnsized(true));
+    row.getItemProperty(SAMPLE_DESCRIPTION_TITLE).setValue(newTextFieldUnsized());
+    row.getItemProperty(DESIGN_FACTOR1_TITLE).setValue(newTextFieldUnsized());
+    row.getItemProperty(DESIGN_FACTOR2_TITLE).setValue(newTextFieldUnsized());
+    row.getItemProperty(DESIGN_FACTOR3_TITLE).setValue(newTextFieldUnsized());
     ComboBox measuredSelection = new ComboBox();
     measuredSelection.setNullSelectionAllowed(false);
     measuredSelection.addItems(measuredTypes);
+    measuredSelection.setSizeFull();
     if(measuredTypes.size() == 1) {
       measuredSelection.setValue(measuredTypes.iterator().next());
       measuredSelection.setEnabled(false);
+    } else {
+      measuredSelection.setRequired(true);
+      measuredSelection.setValidationVisible(true);
     }
     row.getItemProperty(SAMPLE_TYPE_NAME).setValue(measuredSelection);
 
-    samples.setVisible(samples.size() > 0);
+    samples.setVisible(!samples.isEmpty());
     samples.setPageLength(samples.size() + 1);
   }
 
@@ -191,7 +242,7 @@ public class ExperimentCreationComponent extends VerticalLayout {
       samples.removeItem(last);
       tableItems.remove(last);
     }
-    samples.setVisible(samples.size() > 0);
+    samples.setVisible(!samples.isEmpty());
     samples.setPageLength(samples.size() + 1);
   }
 
@@ -237,8 +288,17 @@ public class ExperimentCreationComponent extends VerticalLayout {
   }
 
   public String getExperimentDescription() {
-    return experimentDescription.getValue().toString();
+    return experimentDescription.getValue();
   }
+
+  public String getPublicationReference() {
+    return publicationReference.getValue();
+  }
+
+  public String getDataProvider() {
+    return dataProvider.getValue();
+  }
+
   public List<Map<String, Object>> getComplexSampleInformation() {
     List<Map<String, Object>> res = new ArrayList<>();
     Set<String> selectedEntityTypes = getSOPEntitySelections();
@@ -246,13 +306,25 @@ public class ExperimentCreationComponent extends VerticalLayout {
       String name = parseTextField(SAMPLE_NAME_TITLE, id);
       String donor = parseTextField(DONOR_NAME_TITLE, id);
       String description = parseTextField(SAMPLE_DESCRIPTION_TITLE, id);
-      String measuredSamle = parseComboBox(SAMPLE_TYPE_NAME, id);
+      String measuredSample = parseComboBox(SAMPLE_TYPE_NAME, id);
+      String medium = parseTextField(DESIGN_FACTOR1_TITLE, id);
+      String treatment = parseTextField(DESIGN_FACTOR2_TITLE, id);
+      String timepoint = parseTextField(DESIGN_FACTOR3_TITLE, id);
       Map<String, Object> sampleProperties = new HashMap<>();
       sampleProperties.put("name", name);
       sampleProperties.put("donor", donor);
       sampleProperties.put("description", description);
       sampleProperties.put("selected_entity_types", selectedEntityTypes);
-      sampleProperties.put("selected_measured_type", measuredSamle);
+      sampleProperties.put("selected_measured_type", measuredSample);
+      if(medium!=null) {
+        sampleProperties.put("medium", medium);
+      }
+      if(treatment!=null) {
+        sampleProperties.put("treatment", treatment);
+      }
+      if(timepoint!=null) {
+        sampleProperties.put("timepoint", timepoint);
+      }
       res.add(sampleProperties);
     }
     return res;
@@ -264,6 +336,41 @@ public class ExperimentCreationComponent extends VerticalLayout {
 
   public void resetView() {
     sampleSOPs.setValue(sampleSOPs.getNullSelectionItemId());
+  }
+
+  public Result<Void, String> validateInputs() {
+    Set<String> selections = getSOPEntitySelections();
+    if(selections.contains(null) || selections.contains("")) {
+      return Result.fromError("Please select all missing tissue or cell types.");
+    }
+
+    Set<String> uniqueSampleNames = new HashSet<>();
+    for (Object id : samples.getItemIds()) {
+      TextField nameField = (TextField) samples.getItem(id).getItemProperty("Sample Name").getValue();
+      TextField donorField = (TextField) samples.getItem(id).getItemProperty("Donor Name").getValue();
+      if (!nameField.isValid()) {
+        return Result.fromError("Missing sample name.");
+      }
+      if (!donorField.isValid()) {
+        return Result.fromError("Missing donor name.");
+      }
+      String name = nameField.getValue();
+      String donor = donorField.getValue();
+      String uniqueName = donor + name;
+      if (uniqueSampleNames.contains(uniqueName)) {
+        return Result.fromError(
+            "Sample name " + name + " from donor " + donor + " must be unique.");
+      } else {
+        uniqueSampleNames.add(uniqueName);
+        ComboBox sampleTypeBox = (ComboBox) samples.getItem(id).getItemProperty("Sample Type")
+            .getValue();
+        if (!sampleTypeBox.isValid()) {
+          return Result.fromError(
+              "Please select a Sample Type from the dropdown for each sample you wish to add.");
+        }
+      }
+    }
+      return Result.fromValue(null);
   }
 
 }

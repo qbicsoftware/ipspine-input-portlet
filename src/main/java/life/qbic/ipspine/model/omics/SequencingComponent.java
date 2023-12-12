@@ -8,14 +8,10 @@ import com.vaadin.ui.ComboBox;
 
 public class SequencingComponent extends AOmicsComponent {
 
-//  private ComboBox measurementDevice;
   private ComboBox analyteType;
 
   public SequencingComponent(Map<String, String> devices) {
     super(devices);
-//    measurementDevice = new ComboBox("Sequencer Device", devices.keySet());
-//    measurementDevice.setNullSelectionAllowed(false);
-//    addComponent(measurementDevice);
 
     analyteType = new ComboBox("Sequencing Type", Arrays.asList("DNA", "RNA"));
     analyteType.setNullSelectionAllowed(false);
@@ -23,8 +19,6 @@ public class SequencingComponent extends AOmicsComponent {
     addComponent(analyteType);
 
     multiplexing.setVisible(true);
-    // TextField test = new TextField("Test");
-    // addComponent(test);
   }
 
   public Map<String, String> getExperimentMetadata() {

@@ -10,8 +10,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import javax.xml.bind.JAXBException;
 import life.qbic.datamodel.identifiers.ExperimentCodeFunctions;
 import life.qbic.ipspine.model.*;
+import life.qbic.xml.study.TechnologyType;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import com.vaadin.data.Property.ValueChangeListener;
@@ -38,25 +40,28 @@ import life.qbic.portal.Styles.NotificationType;
 
 public class MainController {
 
-  private OpenbisV3ReadController v3API;
-  private OpenBisClient openbis;
-  private DBManager mainDB;
-  private DBManager ipspineDB;
-  private MainView view;
+  private final OpenbisV3ReadController v3API;
+  private final OpenBisClient openbis;
+  private final DBManager mainDB;
+  private final DBManager ipspineDB;
+  private final MainView view;
   private SOPToOpenbisTranslater sopToOpenbisTranslator;
   private List<JSONSOP> jsonDesigns;
   private final Set<String> BLACKLIST = new HashSet<>(Arrays.asList("QSOPS"));
-  private OpenbisV3CreationController creationController;
-  protected MeasurementExperimentStructure currentDesign;
+  private final OpenbisV3CreationController creationController;
+  final String SETUP_PROPERTY_CODE = "Q_EXPERIMENTAL_SETUP";
+  protected MeasurementExperimentStructure currentMeasurementExperimentStructure;
+  private Experiment currentDesignExperiment;
 
   private static final Logger logger = LogManager.getLogger(MainController.class);
 
 
-  private final List<String> SPACES = Arrays.asList("IPSPINE_TESTING",
-      "IPSPINE_BIOMATERIAL_DEVELOPMENT", "IPSPINE_IPSC_DEVELOPMENT", "IPSPINE_OTHER");
+  private final List<String> SPACES = Arrays.asList("IPSPINE_TESTING", "IPSPINE",
+      "IPSPINE_BIOMATERIAL_DEVELOPMENT", "IPSPINE_IPSC_DEVELOPMENT");
 
+  private final List<String> ATMP_SPACES = Arrays.asList("IPSPINE_BIOMATERIAL_DEVELOPMENT",
+      "IPSPINE_IPSC_DEVELOPMENT");
   private Map<String, String> projectToSpace;
-
 
   public MainController(OpenBisClient openbis, OpenbisV3ReadController v3API,
       OpenbisV3CreationController openBIScreationController, DBManager mainDB, DBManager ipspineDB,
@@ -72,6 +77,8 @@ public class MainController {
     listProjects();
   }
 
+
+
   private void initMetadata(Map<String,String> taxonomy, Map<String, String> tissues, String designsFolder) {
     this.sopToOpenbisTranslator = new SOPToOpenbisTranslater(taxonomy, tissues, designsFolder);
     this.jsonDesigns = sopToOpenbisTranslator.getSOPs();
@@ -79,7 +86,7 @@ public class MainController {
 
   private void listProjects() {
     List<Project> projects;
-    List<ProjectInfo> projectInfos = new ArrayList<>();
+    Map<ProjectInfo,Boolean> projectInfosToATMP = new HashMap<>();
     projectToSpace = new HashMap<>();
 
     for (String space : SPACES) {
@@ -87,18 +94,15 @@ public class MainController {
       for (Project p : projects) {
         if (!BLACKLIST.contains(p.getCode())) {
           String name = mainDB.getProjectName(p.getIdentifier().toString());
-          projectInfos.add(new ProjectInfo(space, p.getCode(), p.getDescription(), name, -1));
+          ProjectInfo info = new ProjectInfo(space, p.getCode(), p.getDescription(), name, -1);
+          projectInfosToATMP.put(info, ATMP_SPACES.contains(space));
           projectToSpace.put(p.getCode(), space);
         }
       }
     }
-    view.setAvailableProjects(projectInfos);
+    view.setAvailableProjects(projectInfosToATMP);
     //view.setSamplePrepSOPs(getSOPsOfType("Sample Preparation"));
     view.setJSONSamplePrepSOPs(jsonDesigns);
-  }
-
-  private List<SOP> getSOPsOfType(String type) {
-    return ipspineDB.getSOPsOfType(type);
   }
 
   private JSONSOP fetchDesignForExperiment(String SOPName) {
@@ -109,14 +113,6 @@ public class MainController {
       }
     }
     return null;
-  }
-
-  private SOP getSOPFromName(String SOPName) {
-    SOP sop = ipspineDB.findSOP(SOPName);
-    if (sop != null) {
-      sop.setResource(createResourceForDataset(sop.getDsCode()));
-    }
-    return sop;
   }
 
   private Resource createResourceForDataset(String datasetCode) {
@@ -147,28 +143,6 @@ public class MainController {
     return resource;
   }
 
-  /**
-   * Removes all samples from the sample tracking database that are of one or several user-defined
-   * types. Goes through every openBIS project that is found and removes samples project by project.
-   * 
-   * @param types the sample type codes belonging to samples that should be removed
-   */
-  public void removeSampleTypesFromTrackingDB(Set<String> types) {
-    for (Project project : openbis.listProjects()) {
-      List<String> samplesToRemove = new ArrayList<>();
-      String projectID = project.getIdentifier().toString();
-      List<Sample> samples = openbis.getSamplesOfProject(projectID);
-      for (Sample sample : samples) {
-        String type = sample.getType().getCode();
-        if (types.contains(type)) {
-          samplesToRemove.add(sample.getCode());
-        }
-      }
-      System.out.println("trying to remove " + samplesToRemove.size());
-      mainDB.removeSamples(samplesToRemove);
-    }
-  }
-
   private List<Sample> loadSamplesOfProject(String space, String project) {
     String projectID = new ProjectIdentifier(new SpaceIdentifier(space), project).toString();
     return openbis.getSamplesOfProject(projectID);
@@ -181,6 +155,7 @@ public class MainController {
 
   public void loadProjectInformation() {
     logger.info("load project info");
+    currentDesignExperiment = null;
     String project = view.getProjectCode();
     String space = projectToSpace.get(project);
     Map<Experiment, JSONSOP> experimentsToSOP = new HashMap<>();
@@ -194,6 +169,9 @@ public class MainController {
       // samplesPerCode.put(s.getCode(), s);
       // }
       for (Experiment e : experiments) {
+        if(ExperimentCodeFunctions.getInfoExperimentID(space, project).equals(e.getIdentifier().getIdentifier())) {
+          currentDesignExperiment = e;
+        }
         //TODO cleanup
         //String sopName = e.getProperties().get("Q_ADDITIONAL_INFO");
         //SOP sop = getSOPFromName(sopName);
@@ -201,6 +179,9 @@ public class MainController {
         if (design != null) {
           experimentsToSOP.put(e, design);
         }
+      }
+      if(currentDesignExperiment==null) {
+        logger.error("No experimental design experiment found for project "+project);
       }
       // view.setSamplesPerCode(samplesPerCode);
     }
@@ -217,43 +198,87 @@ public class MainController {
     view.getProjectBox().addValueChangeListener((ValueChangeListener) event -> loadProjectInformation());
 
     view.getDesignRegistrationButton().addClickListener((Button.ClickListener) event -> {
-      List<Map<String, Object>> sampleInfo = view.getComplexSampleInformation();
-      JSONSOP sop = view.getSelectedSOP();
+      Result<Void, String> validationResult = view.validateDesignInputs();
+      if(validationResult.isError()) {
+        String errorMessage = validationResult.getError();
+        displayError(errorMessage);
+      } else {
+        List<Map<String, Object>> sampleInfo = view.getComplexSampleInformation();
+        JSONSOP sop = view.getSelectedSOP();
 
-      PreparationExperimentStructure design = sopToOpenbisTranslator.getDesignForSOP(sop, sampleInfo);
+        PreparationExperimentStructure design = sopToOpenbisTranslator.getDesignForSOP(sop,
+            sampleInfo);
 
-      String project = view.getProjectCode();
+        String project = view.getProjectCode();
 
-      List<RegisterableExperiment> experiments = prepareRegistration(design, project, view.getExperimentDescription());
+        List<RegisterableExperiment> experiments = prepareRegistration(design, project,
+            view.getExperimentLevelMetadata());
 
-      view.startedRegistrationProcess(view.getDesignRegistrationButton());
-      creationController.registerExperimentsWithSamples(projectToSpace.get(project), project,
-          experiments, new RegisteredSamplesReadyRunnable(controller, experiments, sop.getName(), false));
+        prepDesignXML(new ArrayList<>(), design.getExperimentalDesignProperties());
+
+        view.startedRegistrationProcess(view.getDesignRegistrationButton());
+        creationController.registerExperimentsWithSamples(projectToSpace.get(project), project,
+            experiments,
+            new RegisteredSamplesReadyRunnable(controller, experiments, sop.getName(), false));
+      }
     });
 
     view.getMeasurementRegistrationButton().addClickListener((Button.ClickListener) event -> {
-
-      currentDesign = view.getMeasurementExperimentStructure();
+      Result<Void, String> validationResult = view.validateMeasurementInputs();
+      if(validationResult.isError()) {
+        String errorMessage = validationResult.getError();
+        displayError(errorMessage);
+      } else {
+      currentMeasurementExperimentStructure = view.getMeasurementExperimentStructure();
       String project = view.getProjectCode();
 
-      List<RegisterableExperiment> experiments = prepareRegistration(currentDesign, project,
-          "");//TODO
+      List<RegisterableExperiment> experiments = prepareRegistration(currentMeasurementExperimentStructure, project, null);//TODO
 
       view.startedRegistrationProcess(view.getMeasurementRegistrationButton());
       creationController.registerExperimentsWithSamples(projectToSpace.get(project), project,
           experiments, new RegisteredSamplesReadyRunnable(controller, experiments, null,
               true));
+      }
     });
   }
 
   private List<RegisterableExperiment> prepareRegistration(IExperimentStructure experimentCreator,
-      String project, String experimentDescription) {
+      String project, ExperimentMetadata experimentLevelMetadata) {
     String space = projectToSpace.get(project);
 
     List<Sample> oldSamples = loadSamplesOfProject(space, project);
     List<Experiment> oldExperiments = loadExperimentsOfProject(space, project);
     SampleCounter counter = new SampleCounter(oldSamples, oldExperiments, project);
-    return experimentCreator.createExperimentsForRegistration(counter, space, project, experimentDescription);
+    return experimentCreator.createExperimentsForRegistration(counter, space, project, experimentLevelMetadata);
+  }
+
+  private void prepDesignXML(List<TechnologyType> techTypes, ExperimentalDesignPropertyWrapper newDesignProperties) {
+    String experimentalDesignXML = null;
+    Set<String> designs = new HashSet<String>();
+    if (currentDesignExperiment != null) {
+      Map<String, String> currentProps = currentDesignExperiment.getProperties();
+      String oldXML = currentProps.get(SETUP_PROPERTY_CODE);
+      experimentalDesignXML = ParserHelpers.mergeExperimentalDesignXMLs(oldXML,
+          newDesignProperties, techTypes, designs);
+      if (!experimentalDesignXML.equals(oldXML)) {
+        logger.info("update of experimental design needed");
+        currentProps.put(SETUP_PROPERTY_CODE, experimentalDesignXML);
+        currentDesignExperiment.setProperties(currentProps);
+      } else {
+        logger.info("no update of existing experimental design needed");
+      }
+    } else {
+
+      //TODO this should never be necessary
+      try {
+        logger.info("creating new experimental design");
+        experimentalDesignXML =
+            ParserHelpers.createDesignXML(newDesignProperties, techTypes, designs);
+      } catch (JAXBException e) {
+        logger.error("JAXB Error while creating experimental design XML");
+        e.printStackTrace();
+      }
+    }
   }
 
   private void endProgressVisualization(boolean withMeasurements) {
@@ -262,6 +287,10 @@ public class MainController {
 
   public void sampleRegistrationFailed(String error, boolean withMeasurements) {
     view.endProgressVisualization(false, withMeasurements);
+    displayError(error);
+  }
+
+  private void displayError(String error) {
     Styles.notification("Failed to register sample information.", error, NotificationType.ERROR);
   }
 
@@ -269,13 +298,14 @@ public class MainController {
       List<String> experimentCodes) {
     if (withMeasurements) {
       Button download = view.getTSVDownloadButton();
-      view.setTSVDownload(currentDesign.getTSVContent());
+      view.setTSVDownload(currentMeasurementExperimentStructure.getTSVContent());
       download.setEnabled(true);
     } else {
       for(String code : experimentCodes) {
         String project = view.getProjectCode();
         String id = ExperimentCodeFunctions.getExperimentIdentifier(projectToSpace.get(project), project, code);
       ipspineDB.addExperiment(id, designName);
+      updateExperimentalDesign();
       }
     }
     endProgressVisualization(withMeasurements);
@@ -283,5 +313,9 @@ public class MainController {
         "All experiment information has been successfully added to the system.",
         NotificationType.SUCCESS);
 
+  }
+
+  private void updateExperimentalDesign() {
+    v3API.updateExperiment(currentDesignExperiment);
   }
 }

@@ -1,5 +1,16 @@
 package life.qbic.ipspine.registration;
 
+import ch.ethz.sis.openbis.generic.asapi.v3.dto.dataset.delete.DataSetDeletionOptions;
+import ch.ethz.sis.openbis.generic.asapi.v3.dto.dataset.id.DataSetPermId;
+import ch.ethz.sis.openbis.generic.asapi.v3.dto.dataset.id.IDataSetId;
+import ch.ethz.sis.openbis.generic.asapi.v3.dto.deletion.id.IDeletionId;
+import ch.ethz.sis.openbis.generic.asapi.v3.dto.person.Person;
+import ch.ethz.sis.openbis.generic.asapi.v3.dto.person.fetchoptions.PersonFetchOptions;
+import ch.ethz.sis.openbis.generic.asapi.v3.dto.person.search.PersonSearchCriteria;
+import ch.ethz.sis.openbis.generic.asapi.v3.dto.project.delete.DeleteProjectsOperation;
+import ch.ethz.sis.openbis.generic.asapi.v3.dto.project.delete.ProjectDeletionOptions;
+import ch.ethz.sis.openbis.generic.asapi.v3.dto.vocabulary.create.VocabularyTermCreation;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -185,6 +196,48 @@ public class OpenbisV3APIWrapper {
     return API.searchSpaces(getActiveToken(), sc, new SpaceFetchOptions());
   }
 
+  public void addVocabularyTerms(List<VocabularyTermCreation> terms) {
+    checklogin();
+
+    API.createVocabularyTerms(getActiveToken(), terms);
+  }
+
+  public void deleteOpenbisProject(Project project, String reason) {
+    ProjectDeletionOptions deletionOptions = new ProjectDeletionOptions();
+    deletionOptions.setReason(reason);
+    IOperation operation = new DeleteProjectsOperation(Arrays.asList(project.getIdentifier()),
+        deletionOptions);
+    handleOperations(operation);
+  }
+
+
+  public void deleteOpenbisProject2(Project project, String reason) {
+    ProjectDeletionOptions deletionOptions = new ProjectDeletionOptions();
+    deletionOptions.setReason(reason);
+
+    API.deleteProjects(getActiveToken(), Arrays.asList(project.getIdentifier()), deletionOptions);
+  }
+
+  public void trashDatasets(List<String> permIDs, String reason) {
+    checklogin();
+
+    List<IDataSetId> datasetsToDelete = new ArrayList<>();
+    for(String permID : permIDs) {
+      datasetsToDelete.add(new DataSetPermId(permID));
+    }
+    DataSetDeletionOptions deletionOptions = new DataSetDeletionOptions();
+    deletionOptions.setReason(reason);
+
+    // logical deletion (move objects to the trash can)
+    IDeletionId deletionId = API.deleteDataSets(getActiveToken(), datasetsToDelete, deletionOptions);
+
+    // you can use the deletion id to confirm the deletion (permanently delete objects)
+    //v3.confirmDeletions(sessionToken, Arrays.asList(deletionId));
+
+    // you can use the deletion id to revert the deletion (get the objects out from the trash can)
+    //v3.revertDeletions(sessionToken, Arrays.asList(deletionId));
+  }
+
   public SearchResult<Project> getProjectsOfSpace(String space) {
     checklogin();
     ProjectSearchCriteria sc = new ProjectSearchCriteria();
@@ -360,5 +413,8 @@ public class OpenbisV3APIWrapper {
       return userToken;
   }
 
-
+  public SearchResult<Person> searchPersons(PersonSearchCriteria criteria, PersonFetchOptions personFetchOptions) {
+    checklogin();
+    return API.searchPersons(getActiveToken(), criteria, personFetchOptions);
+  }
 }

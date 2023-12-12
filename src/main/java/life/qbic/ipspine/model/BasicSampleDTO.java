@@ -5,13 +5,16 @@ import life.qbic.datamodel.samples.SampleType;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public class BasicSampleDTO {
 
     SampleType sampleType;
-    //TODO choser
     Set<String> validEntityTypeNames;
     boolean isMeasured = false;
+
+    private static final Logger logger = LogManager.getLogger(BasicSampleDTO.class);
 
     public BasicSampleDTO(SampleType type, Set<String> validNames, boolean isMeasured) {
         this.sampleType = type;
@@ -35,6 +38,9 @@ public class BasicSampleDTO {
     public Set<String> getValidEntityNames(Set<String> entityValues) {
         Set<String> intersection = new HashSet<>(entityValues);
         intersection.retainAll(validEntityTypeNames);
+        if(intersection.size() > 1) {
+            logger.error("more than 1 valid entity provided: "+intersection);
+        }
         return intersection;
     }
 

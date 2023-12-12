@@ -8,16 +8,19 @@ import life.qbic.datamodel.experiments.ExperimentType;
 import life.qbic.datamodel.experiments.OpenbisExperiment;
 import life.qbic.datamodel.samples.ISampleBean;
 import life.qbic.datamodel.samples.TSVSampleBean;
+import life.qbic.ipspine.control.ExperimentalDesignPropertyWrapper;
+import life.qbic.ipspine.control.ParserHelpers;
 import life.qbic.ipspine.registration.RegisterableExperiment;
 import life.qbic.ipspine.registration.SampleCounter;
 
 public class PreparationExperimentStructure implements IExperimentStructure {
 
-  private OpenbisExperiment designExperiment;
-  private OpenbisExperiment extractExperiment;
-  private List<TSVSampleBean> speciesSamples;
-  private List<TSVSampleBean> extractSamples;
+  private final OpenbisExperiment designExperiment;
+  private final OpenbisExperiment extractExperiment;
+  private final List<TSVSampleBean> speciesSamples;
+  private final List<TSVSampleBean> extractSamples;
 
+  private ExperimentalDesignPropertyWrapper experimentalDesign;
   public PreparationExperimentStructure(OpenbisExperiment designExperiment,
       OpenbisExperiment extractExperiment, List<TSVSampleBean> speciesSamples,
       List<TSVSampleBean> extractSamples) {
@@ -28,7 +31,7 @@ public class PreparationExperimentStructure implements IExperimentStructure {
   }
 
   public List<RegisterableExperiment> createExperimentsForRegistration(SampleCounter counter,
-      String space, String project, String experimentDescription) {
+      String space, String project, ExperimentMetadata experimentLevelMetadata) {
     List<RegisterableExperiment> res = new ArrayList<>();
     String expCode = counter.getNewExperiment();
     Map<String, String> oldCodeToNew = new HashMap<>();
@@ -67,15 +70,38 @@ public class PreparationExperimentStructure implements IExperimentStructure {
     List<ISampleBean> extractBeans = new ArrayList<>(extractSamples);
 
     Map<String, Object> metadata = extractExperiment.getMetadata();
-    if(experimentDescription!=null && !experimentDescription.isEmpty()) {
-      metadata.put("Q_SECONDARY_NAME", experimentDescription);
-    }
+    System.out.println("experiment metadata: "+metadata);
+    metadata.putAll(experimentLevelMetadata.getExtractionExperimentMetadata());
+    System.out.println("experiment level metadata: "+metadata);
 
     RegisterableExperiment culture = new RegisterableExperiment(expCode,
         ExperimentType.Q_SAMPLE_EXTRACTION, extractBeans, metadata);
     res.add(culture);
 
+    List<ISampleBean> allSamples = new ArrayList<>(speciesSamples);
+    allSamples.addAll(extractSamples);
+
+    this.experimentalDesign = ParserHelpers.samplesWithMetadataToExperimentalFactorStructure(allSamples);
+
     return res;
   }
 
+  public ExperimentalDesignPropertyWrapper getExperimentalDesignProperties() {
+    return this.experimentalDesign;
+  }
+
+  public List<TSVSampleBean> getExtracts() {
+    return extractSamples;
+  }
+  public List<TSVSampleBean> getSpeciesSamples() {
+    return speciesSamples;
+  }
+
+  public OpenbisExperiment getExtractExperiment() {
+    return extractExperiment;
+  }
+
+  public OpenbisExperiment getDesignExperiment() {
+    return designExperiment;
+  }
 }

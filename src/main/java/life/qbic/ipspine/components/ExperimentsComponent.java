@@ -22,8 +22,8 @@ import org.apache.logging.log4j.Logger;
 public class ExperimentsComponent extends VerticalLayout {
   Logger logger = LogManager.getLogger(ExperimentsComponent.class);
 
-  private Table experiments;
-  private Table sampleTable;
+  private final Table experiments;
+  private final Table sampleTable;
   // private Map<String, Sample> samplesByCode;
   Map<String, String> taxMap;
   Map<String, String> tissueMap;
@@ -142,7 +142,6 @@ public class ExperimentsComponent extends VerticalLayout {
       Integer sampleSize = new Integer(getMeasuredSamples(e).size());
       Date date = e.getRegistrationDate();
 
-      //SOP sop = experimentsToSOP.get(e);
       //String sopName = sop.getName();
       //Resource resource = sop.getResource();
 

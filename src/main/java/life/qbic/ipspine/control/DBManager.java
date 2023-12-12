@@ -1,18 +1,3 @@
-/*******************************************************************************
- * QBiC Project Wizard enables users to create hierarchical experiments including different study
- * conditions using factorial design. Copyright (C) "2016" Andreas Friedrich
- * 
- * This program is free software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- * 
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
- * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
- * General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License along with this program. If
- * not, see <http://www.gnu.org/licenses/>.
- *******************************************************************************/
 package life.qbic.ipspine.control;
 
 
@@ -28,7 +13,6 @@ import java.util.Map;
 import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import life.qbic.ipspine.model.SOP;
 
 public class DBManager {
   private DBConfig config;
@@ -273,60 +257,14 @@ public class DBManager {
     } finally {
       logout(conn);
     }
-    return res;
-  }
-
-  public SOP findSOP(String sopName) {
-    String sql = "SELECT * from sop WHERE name = ?";
-    SOP res = null;
-    Connection conn = login();
-    try {
-      PreparedStatement statement = conn.prepareStatement(sql);
-      statement.setString(1, sopName);
-      ResultSet rs = statement.executeQuery();
-      if (rs.next()) {
-        String description = rs.getString("description");
-        String category = rs.getString("category");
-        String dsCode = rs.getString("dataset_id");
-        res = new SOP(sopName, dsCode, category, description);
-      }
-    } catch (SQLException e) {
-      logger.error("SQL operation unsuccessful: " + e.getMessage());
-      e.printStackTrace();
-    } catch (NullPointerException n) {
-      logger.error("Could not reach SQL database, resuming without SOP.");
+    if(res < 0) {
+      logger.error("Could not find design with name "+designName+" in the database.");
     }
-    logout(conn);
-    return res;
-  }
-
-  public List<SOP> getSOPsOfType(String type) {
-    String sql = "SELECT * from sop WHERE category = ?";
-    List<SOP> res = new ArrayList<>();
-    Connection conn = login();
-    try {
-      PreparedStatement statement = conn.prepareStatement(sql);
-      statement.setString(1, type);
-      ResultSet rs = statement.executeQuery();
-      while (rs.next()) {
-        String sopName = rs.getString("name");
-        String description = rs.getString("description");
-        String category = rs.getString("category");
-        String dsCode = rs.getString("dataset_id");
-        res.add(new SOP(sopName, dsCode, category, description));
-      }
-    } catch (SQLException e) {
-      logger.error("SQL operation unsuccessful: " + e.getMessage());
-      e.printStackTrace();
-    } catch (NullPointerException n) {
-      logger.error("Could not reach SQL database, resuming without SOPs.");
-    }
-    logout(conn);
     return res;
   }
 
   public void removeSamples(List<String> samplesToRemove) {
-    if (samplesToRemove.size() > 0) {
+    if (!samplesToRemove.isEmpty()) {
       String sql1 = "DELETE from samples WHERE id IN (";
       String sql2 = "DELETE from samples_locations WHERE sample_id IN (";
 

@@ -10,8 +10,6 @@ public class GlycomicsComponent extends AOmicsComponent {
   public GlycomicsComponent(Map<String, String> devices) {
     super(devices);
     multiplexing.setVisible(true);
-    // TextField test = new TextField("Test");
-    // addComponent(test);
   }
 
   public Map<String, String> getExperimentMetadata() {

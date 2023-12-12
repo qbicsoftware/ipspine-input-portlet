@@ -4,8 +4,11 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import life.qbic.ipspine.control.Result;
 import life.qbic.ipspine.model.JSONSOP;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -154,6 +157,8 @@ public class MeasurementCreationComponent extends VerticalLayout {
 
     TextField t1 = new TextField();
     TextField t2 = new TextField();
+    t1.setSizeFull();
+    t2.setSizeFull();
 
     ValueChangeListener tfListener = new ValueChangeListener() {
 
@@ -303,5 +308,38 @@ public class MeasurementCreationComponent extends VerticalLayout {
   public void resetView() {
     experimentsComponent.getSampleTable().setValue(experimentsComponent.getSampleTable().getNullSelectionItemId());
     omicsSelection.setValue(omicsSelection.getNullSelectionItemId());
+  }
+
+  public Result<Void, String> validateInputs() {
+    //TODO
+    /*
+    Set<String> uniqueSampleNames = new HashSet<>();
+    for (Object id : samples.getItemIds()) {
+      TextField nameField = (TextField) samples.getItem(id).getItemProperty("Name").getValue();
+      TextField donorField = (TextField) samples.getItem(id).getItemProperty("Donor").getValue();
+      if (!nameField.isValid()) {
+        return Result.fromError("Missing sample name.");
+      }
+      if (!donorField.isValid()) {
+        return Result.fromError("Missing donor name.");
+      }
+      String name = nameField.getValue();
+      String donor = donorField.getValue();
+      String uniqueName = donor + name;
+      if (uniqueSampleNames.contains(uniqueName)) {
+        return Result.fromError(
+            "Sample name " + name + " from donor " + donor + " must be unique.");
+      } else {
+        uniqueSampleNames.add(uniqueName);
+        ComboBox sampleTypeBox = (ComboBox) samples.getItem(id).getItemProperty("Sample Type")
+            .getValue();
+        if (!sampleTypeBox.isValid()) {
+          return Result.fromError(
+              "Please select a Sample Type from the dropdown for each sample you wish to add.");
+        }
+      }
+    }
+     */
+    return Result.fromValue(null);
   }
 }

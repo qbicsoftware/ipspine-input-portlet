@@ -3,15 +3,12 @@ package life.qbic.ipspine.model.omics;
 import java.util.HashMap;
 import java.util.Map;
 import com.vaadin.data.Property.ValueChangeListener;
-import com.vaadin.ui.ComboBox;
 
 public class ProteomicsComponent extends AOmicsComponent {
 
   public ProteomicsComponent(Map<String,String> devices) {
     super(devices);
     multiplexing.setVisible(true);
-//    TextField test = new TextField("Test");
-//    addComponent(test);
   }
 
   public Map<String, String> getExperimentMetadata() {

@@ -1,0 +1,29 @@
+{
+  "experiment_name": "easy 3-level experiment",
+  "description": "Study of nothing much",
+  "samples": [
+    {
+      "valid_entity_names": [
+        "measured"
+      ],
+      "entity_type": "Q_BIOLOGICAL_SAMPLE",
+      "measured": true,
+      "sources": [
+        {
+              "valid_entity_names": [
+                "source tissue"
+              ],
+              "entity_type": "Q_BIOLOGICAL_SAMPLE",
+              "sources": [
+                {
+                  "valid_entity_names": [
+                    "human"
+                  ],
+                  "entity_type": "Q_BIOLOGICAL_ENTITY",
+                  "sources": []
+                }]
+        }
+      ]
+    }
+  ]
+}

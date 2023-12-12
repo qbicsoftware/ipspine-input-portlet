@@ -7,6 +7,6 @@ import life.qbic.ipspine.registration.SampleCounter;
 public interface IExperimentStructure {
 
   List<RegisterableExperiment> createExperimentsForRegistration(SampleCounter counter, String space,
-      String project, String experimentDescription);
+      String project, ExperimentMetadata experimentLevelMetadata);
 
 }

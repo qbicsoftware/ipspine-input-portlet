@@ -35,7 +35,8 @@ public class MeasurementExperimentStructure implements IExperimentStructure {
   }
 
   public List<RegisterableExperiment> createExperimentsForRegistration(SampleCounter counter,
-      String space, String project, String experimentDescription) {
+      String space, String project, ExperimentMetadata experimentDescription) {
+    //TODO Experiment metadata?
     List<RegisterableExperiment> res = new ArrayList<>();
     String expCode = counter.getNewExperiment();
     Map<String, String> oldCodeToNew = new HashMap<>();

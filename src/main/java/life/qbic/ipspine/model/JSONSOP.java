@@ -1,5 +1,7 @@
 package life.qbic.ipspine.model;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import life.qbic.datamodel.samples.SampleType;
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -47,4 +49,22 @@ public class JSONSOP {
     public List<Pair<SampleType, Set<String>>> getAvailableEntities() {
         return availableEntities;
     }
+
+    public List<Pair<SampleType, Set<String>>> getEntitiesNotMeasured() {
+        List<Pair<SampleType, Set<String>>> entities = new ArrayList<>();
+        for(Pair<SampleType, Set<String>> entity : availableEntities) {
+            Set<String> notMeasured = new HashSet<>();
+            for(String entityName : entity.getRight()) {
+                if(!measuredEntities.contains(entityName)) {
+                    notMeasured.add(entityName);
+                }
+            }
+            if(!notMeasured.isEmpty()) {
+                Pair<SampleType, Set<String>> newEntity = Pair.of(entity.getLeft(), notMeasured);
+                entities.add(newEntity);
+            }
+        }
+        return entities;
+    }
+
 }

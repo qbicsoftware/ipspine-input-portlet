@@ -1,10 +1,16 @@
 package life.qbic.ipspine.view;
 
+import com.vaadin.data.Property;
+import com.vaadin.data.Property.ValueChangeEvent;
+import com.vaadin.data.Property.ValueChangeListener;
+import com.vaadin.ui.CheckBox;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import java.util.stream.Collectors;
+import life.qbic.ipspine.control.Result;
+import life.qbic.ipspine.model.ExperimentMetadata;
 import life.qbic.ipspine.model.JSONSOP;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -20,7 +26,6 @@ import life.qbic.datamodel.projects.ProjectInfo;
 import life.qbic.ipspine.components.ExperimentCreationComponent;
 import life.qbic.ipspine.components.MeasurementCreationComponent;
 import life.qbic.ipspine.model.MeasurementExperimentStructure;
-import life.qbic.ipspine.model.SOP;
 import life.qbic.ipspine.model.omics.AOmicsComponent;
 
 public class MainView extends VerticalLayout implements View {
@@ -38,7 +43,9 @@ public class MainView extends VerticalLayout implements View {
   private TabSheet tabs;
 
   private ComboBox availableProjects;
+  private CheckBox showATMPProjects;
   private Map<String, String> projectCodeToDisplay;
+  private Map<ProjectInfo, Boolean> projectsToATMPStatus;
 
   private ExperimentCreationComponent experimentCreationComponent;
 
@@ -63,6 +70,15 @@ public class MainView extends VerticalLayout implements View {
     availableProjects = new ComboBox("Sub-projects");
     availableProjects.setNullSelectionAllowed(false);
     addComponent(availableProjects);
+    showATMPProjects = new CheckBox("Include ATMP Sub-projects");
+    addComponent(showATMPProjects);
+
+    showATMPProjects.addValueChangeListener(new ValueChangeListener() {
+      @Override
+      public void valueChange(ValueChangeEvent event) {
+        filterAvailableProjects(projectsToATMPStatus, showATMPProjects.getValue());
+      }
+    });
 
     projectCodeToDisplay = new HashMap<>();
 
@@ -84,19 +100,28 @@ public class MainView extends VerticalLayout implements View {
     addComponent(tabs);
   }
 
-  public void setAvailableProjects(List<ProjectInfo> projects) {
-    availableProjects.removeAllItems();
-    for (ProjectInfo info : projects) {
-      String code = info.getProjectCode();
-      String displayName = code;
-      if (info.getSecondaryName() != null && info.getSecondaryName().length() > 0) {
-        displayName = code + ": " + info.getSecondaryName();
-      }
-      projectCodeToDisplay.put(code, displayName);
+  public void setAvailableProjects(Map<ProjectInfo, Boolean> projectsToATMPStatus) {
+    this.projectsToATMPStatus = projectsToATMPStatus;
 
-      availableProjects.addItem(displayName);
-    }
+    filterAvailableProjects(projectsToATMPStatus, showATMPProjects.getValue());
+
     availableProjects.setWidth("400");
+  }
+
+  private void filterAvailableProjects(Map<ProjectInfo, Boolean> projectsToATMPStatus, boolean showATMPProjects) {
+    availableProjects.removeAllItems();
+    for (ProjectInfo info : projectsToATMPStatus.keySet()) {
+      if ((!showATMPProjects && !projectsToATMPStatus.get(info)) || showATMPProjects) {
+        String code = info.getProjectCode();
+        String displayName = code;
+        if (info.getSecondaryName() != null && info.getSecondaryName().length() > 0) {
+          displayName = code + ": " + info.getSecondaryName();
+        }
+        projectCodeToDisplay.put(code, displayName);
+
+        availableProjects.addItem(displayName);
+      }
+    }
   }
 
   public String getProjectCode() {
@@ -133,8 +158,12 @@ public class MainView extends VerticalLayout implements View {
   public List<Map<String, Object>> getComplexSampleInformation() {
     return experimentCreationComponent.getComplexSampleInformation();
   }
-  public String getExperimentDescription() {
-    return experimentCreationComponent.getExperimentDescription();
+
+  public ExperimentMetadata getExperimentLevelMetadata() {
+    String publication = experimentCreationComponent.getPublicationReference();
+    String dataProvider = experimentCreationComponent.getDataProvider();
+    String description = experimentCreationComponent.getExperimentDescription();
+    return new ExperimentMetadata(description, publication, dataProvider);
   }
 
   public JSONSOP getSelectedSOP() {
@@ -160,6 +189,10 @@ public class MainView extends VerticalLayout implements View {
   @Override
   public void enter(ViewChangeEvent event) {
     String project = event.getParameters();
+    boolean showAllSetting = showATMPProjects.getValue();
+    if(!showAllSetting) {
+      showATMPProjects.setValue(true);
+    }
     if (projectCodeToDisplay.containsKey(project)) {
       logger.info("Navigating to project " + project + " provided via URL.");
       updateContent(project);
@@ -170,6 +203,7 @@ public class MainView extends VerticalLayout implements View {
       logger.warn("Unable to load project '" + project
           + "' provided via URL. Dropdown selection of projects possible.");
     }
+    showATMPProjects.setValue(showAllSetting);
     availableProjects.setNullSelectionAllowed(true);
     availableProjects.setValue(null);
     availableProjects.setNullSelectionAllowed(false);
@@ -208,4 +242,12 @@ public class MainView extends VerticalLayout implements View {
     return tissueMap;
   }
   public String getDesignsFolder() { return designsFolder; }
+
+  public Result<Void, String> validateDesignInputs() {
+    return experimentCreationComponent.validateInputs();
+  }
+
+  public Result<Void, String> validateMeasurementInputs() {
+    return addMeasurementsComponent.validateInputs();
+  }
 }
