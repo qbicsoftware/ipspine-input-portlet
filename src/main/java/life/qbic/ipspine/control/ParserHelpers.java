@@ -307,7 +307,7 @@ public class ParserHelpers {
    * @return the label if it matches, a similar, matching label, otherwise
    */
   public static String factorNameForXML(String label) {
-    Pattern p = Pattern.compile("([a-z]+_?[a-z]*)+([a-z]|[0-9]*)");
+    Pattern p = Pattern.compile("([a-z]+[a-z0-9_]*)");
     if (p.matcher(label).matches())
       return label;
 
