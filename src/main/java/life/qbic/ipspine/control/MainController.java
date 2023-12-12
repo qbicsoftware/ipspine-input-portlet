@@ -43,7 +43,6 @@ public class MainController {
   private final OpenbisV3ReadController v3API;
   private final OpenBisClient openbis;
   private final DBManager mainDB;
-  private final DBManager ipspineDB;
   private final MainView view;
   private SOPToOpenbisTranslater sopToOpenbisTranslator;
   private List<JSONSOP> jsonDesigns;
@@ -64,13 +63,11 @@ public class MainController {
   private Map<String, String> projectToSpace;
 
   public MainController(OpenBisClient openbis, OpenbisV3ReadController v3API,
-      OpenbisV3CreationController openBIScreationController, DBManager mainDB, DBManager ipspineDB,
-      MainView view) {
+      OpenbisV3CreationController openBIScreationController, DBManager mainDB, MainView view) {
     this.openbis = openbis;
     this.v3API = v3API;
     this.creationController = openBIScreationController;
     this.mainDB = mainDB;
-    this.ipspineDB = ipspineDB;
     this.view = view;
     initMetadata(view.getTaxonomyMap(), view.getTissueMap(), view.getDesignsFolder());
     initListeners();
@@ -106,7 +103,7 @@ public class MainController {
   }
 
   private JSONSOP fetchDesignForExperiment(String SOPName) {
-    String name = ipspineDB.getDesignNameOfExperiment(SOPName);
+    String name = mainDB.getDesignNameOfExperiment(SOPName);
     for(JSONSOP design : jsonDesigns) {
       if(design.getName().equals(name)) {
         return design;
@@ -304,7 +301,7 @@ public class MainController {
       for(String code : experimentCodes) {
         String project = view.getProjectCode();
         String id = ExperimentCodeFunctions.getExperimentIdentifier(projectToSpace.get(project), project, code);
-      ipspineDB.addExperiment(id, designName);
+      mainDB.addExperiment(id, designName);
       updateExperimentalDesign();
       }
     }

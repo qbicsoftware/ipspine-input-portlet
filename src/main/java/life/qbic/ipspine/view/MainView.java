@@ -1,6 +1,5 @@
 package life.qbic.ipspine.view;
 
-import com.vaadin.data.Property;
 import com.vaadin.data.Property.ValueChangeEvent;
 import com.vaadin.data.Property.ValueChangeListener;
 import com.vaadin.ui.CheckBox;
@@ -40,16 +39,16 @@ public class MainView extends VerticalLayout implements View {
   private final Map<String, String> tissueMap;
   private final String designsFolder;
 
-  private TabSheet tabs;
+  private final TabSheet tabs;
 
-  private ComboBox availableProjects;
-  private CheckBox showATMPProjects;
-  private Map<String, String> projectCodeToDisplay;
+  private final ComboBox availableProjects;
+  private final CheckBox showATMPProjects;
+  private final Map<String, String> projectCodeToDisplay;
   private Map<ProjectInfo, Boolean> projectsToATMPStatus;
 
-  private ExperimentCreationComponent experimentCreationComponent;
+  private final ExperimentCreationComponent experimentCreationComponent;
 
-  private MeasurementCreationComponent addMeasurementsComponent;
+  private final MeasurementCreationComponent addMeasurementsComponent;
 
   public final static String navigateToLabel = "project";
 
@@ -197,7 +196,7 @@ public class MainView extends VerticalLayout implements View {
       logger.info("Navigating to project " + project + " provided via URL.");
       updateContent(project);
       return;
-    } else if (project.equals("")) {
+    } else if (project.isEmpty()) {
       logger.info("No project provided. Dropdown selection of projects possible.");
     } else {
       logger.warn("Unable to load project '" + project

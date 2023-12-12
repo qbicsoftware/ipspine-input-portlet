@@ -88,10 +88,6 @@ public class iPSpinePortlet extends QBiCPortletUI {
         config.getMysqlDB(), config.getMysqlUser(), config.getMysqlPass());
     DBManager mainDB = new DBManager(mainDBConfig);
 
-    DBConfig ipspineDBConfig = new DBConfig(config.getMysqlHost(), config.getMysqlPort(),
-        "ipspine_testing", config.getMysqlUser(), config.getMysqlPass());
-    DBManager ipspineDB = new DBManager(ipspineDBConfig);
-
     Map<String, String> taxonomyMap =
         openbisClient.getVocabCodesAndLabelsForVocab("Q_NCBI_TAXONOMY");
     Map<String, String> tissueMap =
@@ -113,7 +109,7 @@ public class iPSpinePortlet extends QBiCPortletUI {
 
     MainView mainView = new MainView(taxonomyMap, tissueMap, designsFolder, typesToComponents);
     new MainController(openbisClient, new OpenbisV3ReadController(v3),
-        openBIScreationController, mainDB, ipspineDB, mainView);
+        openBIScreationController, mainDB, mainView);
     
     final Navigator navigator = new Navigator(UI.getCurrent(), layout);
 
