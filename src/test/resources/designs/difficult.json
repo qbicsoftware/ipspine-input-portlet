@@ -1,0 +1,63 @@
+{
+  "experiment_name": "complicated co-culture",
+  "description": "Study of co-culture",
+  "samples": [
+    {
+      "valid_entity_names": [
+        "Co-culture"
+      ],
+      "entity_type": "Q_BIOLOGICAL_SAMPLE",
+      "measured": true,
+      "sources": [
+        {
+          "valid_entity_names": [
+            "cell 1"
+          ],
+          "entity_type": "Q_BIOLOGICAL_SAMPLE",
+          "measured": true,
+          "sources": [
+            {
+              "valid_entity_names": [
+                "source a", "source b"
+              ],
+              "entity_type": "Q_BIOLOGICAL_SAMPLE",
+              "sources": [
+                {
+                  "valid_entity_names": [
+                    "Sus scrofa domesticus"
+                  ],
+                  "entity_type": "Q_BIOLOGICAL_ENTITY",
+                  "sources": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "valid_entity_names": [
+            "cell 2"
+          ],
+          "entity_type": "Q_BIOLOGICAL_SAMPLE",
+          "measured": true,
+          "sources": [
+            {
+              "valid_entity_names": [
+                "source h"
+              ],
+              "entity_type": "Q_BIOLOGICAL_SAMPLE",
+              "sources": [
+                {
+                  "valid_entity_names": [
+                    "Homo sapiens"
+                  ],
+                  "entity_type": "Q_BIOLOGICAL_ENTITY",
+                  "sources": []
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

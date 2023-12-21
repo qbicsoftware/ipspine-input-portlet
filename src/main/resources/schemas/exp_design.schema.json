@@ -1,0 +1,69 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "$id": "http://qbic.life/exp_design.schema.json",
+  "title": "Experimental design schema",
+  "description": "Describes experimental design",
+  "definitions": {
+    "source": {
+      "description": "describes the source of a sample",
+      "type": "object",
+      "required": [
+        "valid_entity_names",
+        "entity_type",
+        "sources"
+      ],
+      "properties": {
+        "valid_entity_names": {
+          "description": "Describes one or more vocabulary entries for this sample or sample source",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minLength": 1
+        },
+        "entity_type": {
+          "description": "Name of sample type described",
+          "type": "string"
+        },
+        "sources": {
+          "description": "Describes further source(s) of this sample",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/source"
+          }
+        },
+        "measured": {
+          "description": "Denotes if this sample is measured or an intermediate step in sample preparation.",
+          "type": "boolean"
+        }
+      }
+    },
+    "experiment": {
+      "description": "describes the experiment and all samples used in it",
+      "type": "object",
+      "required": [
+        "experiment_name",
+        "samples"
+      ],
+      "properties": {
+        "experiment_name": {
+          "description": "Describes the experiment performed",
+            "type": "string"
+        },
+        "sources": {
+          "description": "Describes files and/or sub-folders if existent",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/source"
+          },
+        "minLength": 1
+      }
+    }
+  }
+  },
+  "allOf": [
+    {
+      "$ref": "#/definitions/experiment"
+    }
+  ]
+}

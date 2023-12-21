@@ -1,0 +1,46 @@
+package life.qbic.ipspine.model.omics;
+
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import com.vaadin.data.Property.ValueChangeListener;
+import com.vaadin.ui.ComboBox;
+
+public class SequencingComponent extends AOmicsComponent {
+
+  private ComboBox analyteType;
+
+  public SequencingComponent(Map<String, String> devices) {
+    super(devices);
+
+    analyteType = new ComboBox("Sequencing Type", Arrays.asList("DNA", "RNA"));
+    analyteType.setNullSelectionAllowed(false);
+    analyteType.setValue("DNA");
+    addComponent(analyteType);
+
+    multiplexing.setVisible(true);
+  }
+
+  public Map<String, String> getExperimentMetadata() {
+    Map<String, String> metadata = new HashMap<>();
+    metadata.put("Q_SEQUENCER_DEVICE", devices.get(measurementDevice.getValue().toString()));
+    metadata.put("EXPERIMENT_TYPE", "Q_NGS_MEASUREMENT");
+    metadata.put("ANALYTE_TYPE", analyteType.getValue().toString());
+    return metadata;
+  }
+
+  public boolean isValid() {
+    return measurementDevice.getValue() != null && analyteType.getValue() != null;
+  }
+
+  @Override
+  public String getInfoText() {
+    return analyteType.getValue().toString() + "-Seq measurement";
+  }
+  
+  @Override
+  public void addListenerToSubcomponents(ValueChangeListener omicsInputChangeListener) {
+    measurementDevice.addValueChangeListener(omicsInputChangeListener);
+    analyteType.addValueChangeListener(omicsInputChangeListener);
+  }
+}
