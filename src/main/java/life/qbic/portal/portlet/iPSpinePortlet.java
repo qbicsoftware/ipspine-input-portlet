@@ -83,7 +83,6 @@ public class iPSpinePortlet extends QBiCPortletUI {
     layout.setSpacing(true);
     layout.setMargin(true);
 
-    //TODO use same database for both
     DBConfig mainDBConfig = new DBConfig(config.getMysqlHost(), config.getMysqlPort(),
         config.getMysqlDB(), config.getMysqlUser(), config.getMysqlPass());
     DBManager mainDB = new DBManager(mainDBConfig);

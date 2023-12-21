@@ -104,7 +104,6 @@ public class ExperimentCreationComponent extends VerticalLayout {
 
     addComponent(samples);
     addComponent(buttons);
-
     samples.setVisible(false);
     samples.setSelectable(true);
 
@@ -231,8 +230,7 @@ public class ExperimentCreationComponent extends VerticalLayout {
       measuredSelection.setValidationVisible(true);
     }
     row.getItemProperty(SAMPLE_TYPE_NAME).setValue(measuredSelection);
-
-    samples.setVisible(!samples.isEmpty());
+    samples.setVisible(samples.size() > 0);
     samples.setPageLength(samples.size() + 1);
   }
 
@@ -242,7 +240,7 @@ public class ExperimentCreationComponent extends VerticalLayout {
       samples.removeItem(last);
       tableItems.remove(last);
     }
-    samples.setVisible(!samples.isEmpty());
+    samples.setVisible(samples.size() > 0);
     samples.setPageLength(samples.size() + 1);
   }
 

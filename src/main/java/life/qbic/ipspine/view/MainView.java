@@ -53,9 +53,7 @@ public class MainView extends VerticalLayout implements View {
   public final static String navigateToLabel = "project";
 
   private ProgressBar bar;
-
-  // private String resourceUrl;
-
+  
   public MainView(Map<String, String> taxMap, Map<String, String> tissueMap, String designsFolder,
       Map<String, AOmicsComponent> typesToComponents) {
     this.taxonomyMap = taxMap;
